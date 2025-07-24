@@ -28,7 +28,8 @@ export const registerUser = async (req, res, next) => {
       passwordHash,
       avatarUrl: null,
     });
-    res.status(201).json({message: "User registered successfully",user: { _id: newUser._id, name: newUser.name, email: newUser.email },});
+    
+    res.status(201).json({message: "User registered successfully", user: { _id: newUser._id, name: newUser.name, email: newUser.email },});
   } catch (error) {
     console.error("Error in registerUser:", error);
     next(error);
@@ -54,7 +55,7 @@ export const loginUser = async (req, res, next) => {
 
     // Generate a new access token and refresh token
     const accessToken = generateAccessToken({ _id: user._id, role: user.role });
-    const refreshToken = generateRefreshToken({_id: user._id,role: user.role});
+    const refreshToken = generateRefreshToken({_id: user._id, role: user.role,});
 
     user.refreshToken.push(refreshToken); // Add the new refresh token to the user's array
     await user.save(); // Save the user with the new refresh token
@@ -89,27 +90,37 @@ export const refreshToken = async (req, res, next) => {
       return next(new AppError("Invalid refresh token", 401));
     }
 
-    const newAccessToken = generateAccessToken({
-      _id: user._id,
-      role: user.role,
-    });
-    const newRefreshToken = generateRefreshToken({
-      _id: user._id,
-      role: user.role,
-    });
+    const newAccessToken = generateAccessToken({_id: user._id, role: user.role,});
+    const newRefreshToken = generateRefreshToken({_id: user._id, role: user.role,});
 
     // Update the user's refresh token array and remove the old token
-    user.refreshToken = user.refreshToken.filter(
-      (token) => token !== refreshToken
-    );
+    user.refreshToken = user.refreshToken.filter((token) => token !== refreshToken);
     user.refreshToken.push(newRefreshToken);
     await user.save();
 
-    res
-      .status(200)
-      .json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    res.status(200).json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
   } catch (error) {
     console.log("Error in refreshToken:", error);
+    next(error);
+  }
+};
+
+export const logoutUser = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return next(new AppError("No refresh token provided.", 401));
+
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await User.findById(decoded._id);
+
+    if (!user) return next(new AppError("User not found.", 401));
+
+    user.refreshToken = user.refreshToken.filter((token) => token !== refreshToken);
+    await user.save();
+
+    res.json({ message: "Logged out successfully." });
+  } catch (error) {
+    console.log("Error in logout :", error);
     next(error);
   }
 };
