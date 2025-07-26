@@ -4,6 +4,7 @@ const teamSchema = new mongoose.Schema(
   {
     name: {
       type: String,
+      unique: true,
       require: true,
     },
     owner: {
