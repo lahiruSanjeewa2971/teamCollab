@@ -19,3 +19,31 @@ export const addMemberToTeam = async (teamId, userId) => {
     { new: true }
   );
 };
+
+// Get all teams where user is a member
+export const getTeamsByUserMembership = async (userId) => {
+  return await Team.find({ members: userId })
+    .populate('owner', 'name email')
+    .populate('members', 'name email')
+    .sort({ createdAt: -1 });
+};
+
+// Update team members (add new member)
+export const updateTeamMembers = async (teamId, userId) => {
+  return await Team.findByIdAndUpdate(
+    teamId,
+    { $addToSet: { members: userId } },
+    { new: true }
+  ).populate('owner', 'name email')
+   .populate('members', 'name email');
+};
+
+// Update team details (name, description)
+export const updateTeamDetails = async (teamId, updateData) => {
+    return await Team.findByIdAndUpdate(
+        teamId,
+        updateData,
+        { new: true, runValidators: true }
+    ).populate('owner', 'name email')
+     .populate('members', 'name email');
+};

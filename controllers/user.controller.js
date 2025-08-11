@@ -9,3 +9,22 @@ export const getAllUsersController = async (req, res, next) => {
     next(error);
   }
 };
+
+// Search users by name with pagination
+export const searchUsersController = async (req, res, next) => {
+  try {
+    const { query, page, limit } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ 
+        error: 'Search query is required' 
+      });
+    }
+    
+    const result = await userService.searchUsersByNameService(query, page, limit);
+    res.status(200).json(result);
+  } catch (error) {
+    console.log("error in searchUsers: ", error);
+    next(error);
+  }
+};

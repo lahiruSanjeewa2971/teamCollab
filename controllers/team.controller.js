@@ -1,10 +1,14 @@
 import * as teamService from '../service/team.service.js';
+import AppError from '../utils/AppError.js';
+import mongoose from 'mongoose';
+
+const { isValidObjectId } = mongoose;
 
 export const createTeam = async (req, res, next) => {
     try {
-        const {name, members} = req.body;
-        const team = await teamService.createTeamService(name, req.user._id, members);
-        res.status(201).json({message: "New team created successful.", team});        
+        const {name, description, members} = req.body;
+        const team = await teamService.createTeamService(name, req.user._id, description, members);
+        res.status(201).json({message: "New team created successfully.", team});        
     } catch (error) {
         console.log('Error in team creation Controller :', error);
         next(error);
@@ -24,6 +28,67 @@ export const joinToTeam = async (req, res, next) => {
         res.status(200).json({message: "Team join successful.", updatedTeam});
     } catch (error) {
         console.log('error in joining a team ', error);
+        next(error);
+    }
+}
+
+// Get all teams where user is a member
+export const getTeams = async (req, res, next) => {
+    try {
+        const teams = await teamService.getTeamsByUserService(req.user._id);
+        res.status(200).json({ teams });
+    } catch (error) {
+        console.log('Error in getting teams: ', error);
+        next(error);
+    }
+}
+
+// Add member to team (only owner can do this)
+export const addMember = async (req, res, next) => {
+    try {
+        const { userId } = req.body;
+        const { teamId } = req.params;
+        
+        if (!userId) {
+            return next(new AppError('User ID is required', 400));
+        }
+        
+        if (!isValidObjectId(teamId)) {
+            return next(new AppError('Invalid Team ID format', 400));
+        }
+        
+        if (!isValidObjectId(userId)) {
+            return next(new AppError('Invalid User ID format', 400));
+        }
+        
+        const updatedTeam = await teamService.addMemberToTeamService(teamId, userId, req.user._id);
+        res.status(200).json({ 
+            message: "Member added successfully.", 
+            team: updatedTeam 
+        });
+    } catch (error) {
+        console.log('Error in adding member to team: ', error);
+        next(error);
+    }
+}
+
+// Update team details (name, description)
+export const updateTeam = async (req, res, next) => {
+    try {
+        const { teamId } = req.params;
+        const { name, description } = req.body;
+
+        if (!isValidObjectId(teamId)) {
+            return next(new AppError('Invalid Team ID format', 400));
+        }
+
+        const updatedTeam = await teamService.updateTeamService(teamId, req.user._id, { name, description });
+        res.status(200).json({
+            message: "Team updated successfully.",
+            team: updatedTeam
+        });
+    } catch (error) {
+        console.log('Error in updating team: ', error);
         next(error);
     }
 }
