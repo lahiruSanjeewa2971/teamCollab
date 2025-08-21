@@ -6,7 +6,9 @@ import {
     findTeamByName,
     getTeamsByUserMembership,
     updateTeamMembers,
-    updateTeamDetails
+    updateTeamDetails,
+    searchTeamsByName,
+    removeMemberFromTeam
 } from '../repository/team.repository.js';
 import AppError from '../utils/AppError.js';
 
@@ -71,6 +73,47 @@ export const addMemberToTeamService = async (teamId, userId, requesterId) => {
     }
     
     const updatedTeam = await updateTeamMembers(teamId, userId);
+    return updatedTeam;
+}
+
+// Search teams by name
+export const searchTeamsService = async (query, userId) => {
+    const searchResults = await searchTeamsByName(query, userId);
+    
+    // Add isOwner flag and isMember flag to each team
+    const teamsWithFlags = searchResults.map(team => ({
+        ...team.toObject(),
+        isOwner: team.owner._id.toString() === userId.toString(),
+        isMember: team.members.some(member => member._id.toString() === userId.toString())
+    }));
+    
+    return teamsWithFlags;
+}
+
+// Remove member from team (only owner can do this)
+export const removeMemberFromTeamService = async (teamId, memberId, requesterId) => {
+    const team = await findTeamById(teamId);
+    
+    if (!team) {
+        throw new AppError('Team not found', 404);
+    }
+    
+    // Check if requester is the team owner
+    if (team.owner.toString() !== requesterId.toString()) {
+        throw new AppError('Only team owner can remove members', 403);
+    }
+    
+    // Check if trying to remove the owner
+    if (team.owner.toString() === memberId.toString()) {
+        throw new AppError('Cannot remove team owner', 400);
+    }
+    
+    // Check if user is actually a member
+    if (!team.members.some(member => member.toString() === memberId.toString())) {
+        throw new AppError('User is not a member of this team', 400);
+    }
+    
+    const updatedTeam = await removeMemberFromTeam(teamId, memberId);
     return updatedTeam;
 }
 

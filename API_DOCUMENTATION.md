@@ -129,6 +129,42 @@ Get all teams where the authenticated user is a member.
 }
 ```
 
+#### GET /api/team/search?query=teamName
+Search for teams by name. Returns teams that match the search query and where the user is not already a member.
+
+**Query Parameters:**
+- `query` (required): Search term for team name (case-insensitive, partial match)
+
+**Response:**
+```json
+{
+  "teams": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "name": "Marketing Team",
+      "description": "Team responsible for marketing campaigns",
+      "owner": {
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "members": [
+        {
+          "_id": "507f1f77bcf86cd799439011",
+        "name": "John Doe",
+        "email": "john@example.com"
+        }
+      ],
+      "isOwner": false,
+      "isMember": false,
+      "createdAt": "2025-01-20T10:30:00.000Z",
+      "updatedAt": "2025-01-20T10:30:00.000Z"
+    }
+  ],
+  "query": "marketing"
+}
+```
+
 #### POST /api/team/:teamId/join
 Join an existing team (requires authentication).
 
@@ -189,6 +225,48 @@ Add a new member to a team (only team owner can do this).
 {
   "status": "fail",
   "message": "Only team owner can add members"
+}
+```
+
+#### DELETE /api/team/:teamId/members/:memberId
+Remove a member from a team (only team owner can do this).
+
+**Response:**
+```json
+{
+  "message": "Member removed successfully.",
+  "team": {
+    "_id": "507f1f77bcf86cd799439013",
+    "name": "Marketing Team",
+    "owner": {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "email": "john@example.com"
+    },
+    "members": [
+      {
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "John Doe",
+        "email": "john@example.com"
+      }
+    ]
+  }
+}
+```
+
+**Error Response (403 - Not Owner):**
+```json
+{
+  "status": "fail",
+  "message": "Only team owner can remove members"
+}
+```
+
+**Error Response (400 - Cannot Remove Owner):**
+```json
+{
+  "status": "fail",
+  "message": "Cannot remove team owner"
 }
 ```
 

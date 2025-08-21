@@ -72,6 +72,51 @@ export const addMember = async (req, res, next) => {
     }
 }
 
+// Search teams by name
+export const searchTeams = async (req, res, next) => {
+    try {
+        const { query } = req.query;
+        const userId = req.user._id;
+        
+        if (!query || query.trim().length === 0) {
+            return next(new AppError('Search query is required', 400));
+        }
+        
+        const searchResults = await teamService.searchTeamsService(query.trim(), userId);
+        res.status(200).json({ 
+            teams: searchResults,
+            query: query.trim()
+        });
+    } catch (error) {
+        console.log('Error in searching teams: ', error);
+        next(error);
+    }
+}
+
+// Remove member from team (only owner can do this)
+export const removeMember = async (req, res, next) => {
+    try {
+        const { teamId, memberId } = req.params;
+        
+        if (!isValidObjectId(teamId)) {
+            return next(new AppError('Invalid Team ID format', 400));
+        }
+        
+        if (!isValidObjectId(memberId)) {
+            return next(new AppError('Invalid Member ID format', 400));
+        }
+        
+        const updatedTeam = await teamService.removeMemberFromTeamService(teamId, memberId, req.user._id);
+        res.status(200).json({
+            message: "Member removed successfully.",
+            team: updatedTeam
+        });
+    } catch (error) {
+        console.log('Error in removing member from team: ', error);
+        next(error);
+    }
+}
+
 // Update team details (name, description)
 export const updateTeam = async (req, res, next) => {
     try {

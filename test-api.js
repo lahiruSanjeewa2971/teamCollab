@@ -86,8 +86,18 @@ export const testAPIs = async () => {
       console.log('✅ User search successful, found:', searchResponse.data.users.length, 'users');
       console.log('📊 Pagination info:', searchResponse.data.pagination);
       
-      // 6. Test Add Member (if we have another user)
-      console.log('\n6. Testing Add Member...');
+      // 6. Test Team Search
+      console.log('\n6. Testing Team Search...');
+      try {
+        const teamSearchResponse = await makeAuthRequest('GET', '/team/search?query=Test');
+        console.log('✅ Team search successful, found:', teamSearchResponse.data.teams.length, 'teams');
+        console.log('🔍 Search query:', teamSearchResponse.data.query);
+      } catch (error) {
+        console.log('ℹ️  Team search failed (expected if no teams match):', error.response?.data?.message || error.message);
+      }
+      
+      // 7. Test Add Member (if we have another user)
+      console.log('\n7. Testing Add Member...');
       try {
         const addMemberResponse = await makeAuthRequest('POST', `/team/${teamId}/members`, {
           userId: '507f1f77bcf86cd799439011' // Example ObjectId
