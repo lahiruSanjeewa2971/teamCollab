@@ -25,6 +25,15 @@ export const joinToTeam = async (req, res, next) => {
         }
 
         const updatedTeam = await teamService.joinToTeamService(memberId, joiningTeamId);
+        
+        // Resolve any existing team removal notification for this user and team
+        try {
+            const notificationService = await import('../service/notification.service.js');
+            await notificationService.default.resolveTeamRemovalNotification(memberId, joiningTeamId);
+        } catch (notificationError) {
+            console.error('Failed to resolve team removal notification:', notificationError);
+        }
+        
         res.status(200).json({message: "Team join successful.", updatedTeam});
     } catch (error) {
         console.log('error in joining a team ', error);
@@ -106,10 +115,33 @@ export const removeMember = async (req, res, next) => {
             return next(new AppError('Invalid Member ID format', 400));
         }
         
-        const updatedTeam = await teamService.removeMemberFromTeamService(teamId, memberId, req.user._id);
+        const result = await teamService.removeMemberFromTeamService(teamId, memberId, req.user._id);
+        
+        // Create persistent notification in database
+        try {
+            const notificationService = await import('../service/notification.service.js');
+            await notificationService.default.createTeamRemovalNotification(memberId, teamId, result.teamName);
+        } catch (notificationError) {
+            console.error('Failed to create persistent notification:', notificationError);
+        }
+        
+        // Send real-time notification via Socket.IO
+        try {
+            const { notifyUser } = await import('../server.js');
+            const notificationPayload = {
+                teamId,
+                teamName: result.teamName,
+                message: `You have been removed from '${result.teamName}'`,
+                timestamp: new Date().toISOString()
+            };
+            notifyUser(memberId, 'user:removed-from-team', notificationPayload);
+        } catch (socketError) {
+            console.error('Socket.IO notification failed:', socketError);
+        }
+        
         res.status(200).json({
             message: "Member removed successfully.",
-            team: updatedTeam
+            team: result.team
         });
     } catch (error) {
         console.log('Error in removing member from team: ', error);

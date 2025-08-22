@@ -114,7 +114,13 @@ export const removeMemberFromTeamService = async (teamId, memberId, requesterId)
     }
     
     const updatedTeam = await removeMemberFromTeam(teamId, memberId);
-    return updatedTeam;
+    
+    // Return additional data for Socket.IO notification
+    return {
+        team: updatedTeam,
+        removedMemberId: memberId,
+        teamName: team.name
+    };
 }
 
 // Update team details (only owner can do this)

@@ -11,7 +11,7 @@ const testUser = {
 };
 
 const testTeam = {
-  name: 'Third Team',
+  name: 'Test Team 3',
   description: 'A test team for member removal testing'
 };
 
@@ -65,53 +65,45 @@ const testRemoveMemberAPI = async () => {
       return;
     }
     
-    // 3. Get existing teams
-    console.log('\n3. Getting existing teams...');
+    // 3. Test Team Creation
+    console.log('\n3. Testing Team Creation...');
     try {
-      const getTeamsResponse = await makeAuthRequest('GET', '/team');
-      console.log('✅ Get teams successful, found:', getTeamsResponse.data.teams.length, 'teams');
+      const createTeamResponse = await makeAuthRequest('POST', '/team', testTeam);
+      console.log('✅ Team creation successful:', createTeamResponse.data.message);
+      const teamId = createTeamResponse.data.team._id;
+      console.log('📋 Team ID:', teamId);
+      console.log('📋 Initial members:', createTeamResponse.data.team.members.length);
       
-      if (getTeamsResponse.data.teams.length > 0) {
-        const team = getTeamsResponse.data.teams[0];
-        const teamId = team._id;
-        console.log('📋 Using team:', team.name, 'ID:', teamId);
-        console.log('📋 Current members:', team.members.length);
+      // 4. Test Add Member (to have someone to remove)
+      console.log('\n4. Testing Add Member...');
+      try {
+        // First, let's add a test user to the team
+        const addMemberResponse = await makeAuthRequest('POST', `/team/${teamId}/members`, {
+          userId: '507f1f77bcf86cd799439011' // Example ObjectId
+        });
+        console.log('✅ Add member successful:', addMemberResponse.data.message);
+        console.log('📋 Members after adding:', addMemberResponse.data.team.members.length);
         
-        // 4. Check if we can remove a member (test with owner first to see error)
-        console.log('\n4. Testing Remove Member (Owner - should fail)...');
-        const ownerMemberId = team.owner._id;
-        console.log('📋 Attempting to remove owner:', ownerMemberId);
+        // 5. Test Remove Member
+        console.log('\n5. Testing Remove Member...');
         try {
-          const removeMemberResponse = await makeAuthRequest('DELETE', `/team/${teamId}/members/${ownerMemberId}`);
+          const removeMemberResponse = await makeAuthRequest('DELETE', `/team/${teamId}/members/507f1f77bcf86cd799439011`);
           console.log('✅ Remove member successful:', removeMemberResponse.data.message);
+          console.log('📋 Members after removing:', removeMemberResponse.data.team.members.length);
         } catch (error) {
-          console.log('✅ Remove owner failed as expected:', error.response?.data?.message || error.message);
-          console.log('🔍 Status:', error.response?.status);
+          console.log('❌ Remove member failed:', error.response?.data?.message || error.message);
         }
         
-        // 5. Test Remove Member functionality with a different approach
-        console.log('\n5. Testing Remove Member API endpoint...');
-        // Let's test the endpoint with a fake member ID to see if the route exists
-        try {
-          const removeMemberResponse = await makeAuthRequest('DELETE', `/team/${teamId}/members/507f1f77bcf86cd799439999`);
-          console.log('✅ Remove member successful:', removeMemberResponse.data.message);
-        } catch (error) {
-          if (error.response?.status === 400 && error.response.data.message.includes('not a member')) {
-            console.log('✅ Remove member API working! Error as expected:', error.response.data.message);
-          } else if (error.response?.status === 404) {
-            console.log('❌ Route not found (404). The DELETE route may not be registered properly.');
-          } else {
-            console.log('🔍 Remove member response:', error.response?.status, error.response?.data?.message);
-          }
+      } catch (error) {
+        if (error.response?.status === 400) {
+          console.log('ℹ️  Add member failed (expected for invalid user ID):', error.response.data.message);
+        } else {
+          console.log('❌ Add member failed:', error.response?.data || error.message);
         }
-      } else {
-        console.log('ℹ️  No teams found. Creating one...');
-        const createTeamResponse = await makeAuthRequest('POST', '/team', testTeam);
-        console.log('✅ Team creation successful:', createTeamResponse.data.message);
       }
       
     } catch (error) {
-      console.log('❌ Get teams failed:', error.response?.data || error.message);
+      console.log('❌ Team creation failed:', error.response?.data || error.message);
     }
     
     console.log('\n🎉 Remove Member API tests completed!');

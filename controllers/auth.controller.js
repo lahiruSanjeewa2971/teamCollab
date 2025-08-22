@@ -116,8 +116,18 @@ export const logoutUser = async (req, res, next) => {
 
     if (!user) return next(new AppError("User not found.", 401));
 
+    // Remove the refresh token
     user.refreshToken = user.refreshToken.filter((token) => token !== refreshToken);
     await user.save();
+
+    // Clean up Socket.IO connection for this user
+    try {
+      const { handleUserLogout } = await import('../server.js');
+      handleUserLogout(user._id.toString());
+    } catch (socketError) {
+      console.error('Socket.IO cleanup failed during logout:', socketError);
+      // Don't fail the logout if Socket.IO cleanup fails
+    }
 
     res.json({ message: "Logged out successfully." });
   } catch (error) {

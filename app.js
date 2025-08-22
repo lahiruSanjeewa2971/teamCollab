@@ -8,6 +8,7 @@ import errorMiddleware from './middleware/errorMiddleware.js';
 import authRoutes from './routes/auth.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import userRoutes from './routes/user.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(errorMiddleware);
