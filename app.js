@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import userRoutes from './routes/user.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import channelRoutes from './routes/channel.routes.js';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api', channelRoutes);
 
 // Error handling middleware
 app.use(errorMiddleware);

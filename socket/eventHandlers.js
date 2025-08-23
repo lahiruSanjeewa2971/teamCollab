@@ -15,7 +15,7 @@ export const setupEventHandlers = (io, userConnections) => {
   // This file can be extended with additional event handlers in the future
   // For now, it's minimal since we only have basic team removal notifications
   
-  console.log("Event handlers initialized");
+  // Event handlers initialized
 };
 
 /**

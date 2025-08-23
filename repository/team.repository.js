@@ -22,10 +22,17 @@ export const addMemberToTeam = async (teamId, userId) => {
 
 // Get all teams where user is a member
 export const getTeamsByUserMembership = async (userId) => {
-  return await Team.find({ members: userId })
+  console.log('getTeamsByUserMembership: Called with userId:', userId);
+  console.log('getTeamsByUserMembership: userId type:', typeof userId);
+  console.log('getTeamsByUserMembership: userId value:', userId);
+  
+  const teams = await Team.find({ members: userId })
     .populate('owner', 'name email')
     .populate('members', 'name email')
     .sort({ createdAt: -1 });
+  
+  console.log('getTeamsByUserMembership: Found teams:', teams);
+  return teams;
 };
 
 // Update team members (add new member)

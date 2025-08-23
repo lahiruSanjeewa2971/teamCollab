@@ -43,7 +43,9 @@ export const joinToTeamService = async (memberId, joiningTeamId) => {
 
 // Get all teams where user is a member
 export const getTeamsByUserService = async (userId) => {
+    console.log('getTeamsByUserService: Called with userId:', userId);
     const teams = await getTeamsByUserMembership(userId);
+    console.log('getTeamsByUserService: Raw teams from repository:', teams);
     
     // Add isOwner flag to each team
     const teamsWithOwnership = teams.map(team => ({
@@ -51,6 +53,7 @@ export const getTeamsByUserService = async (userId) => {
         isOwner: team.owner._id.toString() === userId.toString()
     }));
     
+    console.log('getTeamsByUserService: Teams with ownership flags:', teamsWithOwnership);
     return teamsWithOwnership;
 }
 

@@ -91,6 +91,5 @@ export const handleUserLogout = (userId) => {
 connectDB().then(() => {
   server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Socket.IO server initialized with clean, scalable architecture`);
   });
 });

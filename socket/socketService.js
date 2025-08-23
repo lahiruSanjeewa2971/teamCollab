@@ -31,7 +31,7 @@ class SocketService {
     // Set up event handlers
     setupEventHandlers(this.io, this.userConnections);
 
-    console.log("Socket.IO server initialized with clean, scalable architecture");
+    // Socket.IO server initialized
     return this.io;
   }
 
@@ -84,8 +84,6 @@ class SocketService {
         socket.disconnect(true);
       }
       this.userConnections.delete(userId);
-      console.log(`🚪 User ${userId} connection cleaned up`);
-      console.log(`📊 Active connections: ${this.userConnections.size}`);
     }
   }
 
@@ -102,19 +100,12 @@ class SocketService {
         if (!socket || !socket.connected) {
           this.userConnections.delete(userId);
           cleanedCount++;
-          console.log(`🧹 Cleaned up abandoned connection for user: ${userId}`);
         }
       }
-      
-      if (cleanedCount > 0) {
-        console.log(`🧹 Cleaned up ${cleanedCount} abandoned connections. Active connections: ${this.userConnections.size}`);
-      }
-      
-      const stats = this.getConnectionStats();
-      console.log(`📊 Connection Status - Total: ${stats.totalSockets}, Authenticated: ${stats.authenticatedUsers}, Anonymous: ${stats.anonymousConnections}`);
     }, 60000); // 60 seconds
   }
 }
 
 // Export singleton instance
 export default new SocketService();
+
