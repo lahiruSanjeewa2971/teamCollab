@@ -83,3 +83,48 @@ export const getUserChannels = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get all channels from teams where user is a member
+ */
+export const getChannelsFromUserTeams = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { teamIds } = req.body;
+
+    if (!teamIds || !Array.isArray(teamIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'teamIds array is required'
+      });
+    }
+
+    const channels = await channelService.getChannelsFromUserTeams(userId, teamIds);
+
+    res.status(200).json({
+      success: true,
+      channels
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Join a channel
+ */
+export const joinChannel = async (req, res, next) => {
+  try {
+    const { channelId } = req.params;
+    const userId = req.user._id;
+
+    const channel = await channelService.joinChannel(channelId, userId);
+
+    res.status(200).json({
+      success: true,
+      channel
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -9,7 +9,7 @@ export const createNewTeam = async (teamData) => {
 };
 
 export const findTeamById = async (teamId) => {
-  return await Team.findById({ _id: teamId });
+  return await Team.findById(teamId);
 };
 
 export const addMemberToTeam = async (teamId, userId) => {

@@ -111,7 +111,17 @@ class ChannelService {
       }
 
       // Check if user is member of the team
-      const team = await findTeamById(channel.teamId);
+      // channel.teamId might be populated or just an ID string
+      let teamId;
+      if (typeof channel.teamId === 'object' && channel.teamId._id) {
+        teamId = channel.teamId._id;
+      } else if (typeof channel.teamId === 'string') {
+        teamId = channel.teamId;
+      } else {
+        throw new AppError('Invalid team ID format', 400);
+      }
+      
+      const team = await findTeamById(teamId);
       if (!team) {
         throw new AppError('Team not found', 404);
       }
@@ -136,6 +146,95 @@ class ChannelService {
     try {
       const channels = await channelRepository.getChannelsByUser(userId);
       return channels;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get all channels from teams where user is a member
+   */
+  async getChannelsFromUserTeams(userId, teamIds) {
+    try {
+      if (!teamIds || teamIds.length === 0) {
+        return [];
+      }
+      
+      const channels = await channelRepository.getChannelsFromUserTeams(userId, teamIds);
+      return channels;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Join a channel
+   */
+  async joinChannel(channelId, userId) {
+    try {
+      console.log('🔍 joinChannel: Starting with channelId:', channelId, 'userId:', userId);
+      
+      // Get the channel
+      const channel = await channelRepository.getChannelById(channelId);
+      if (!channel) {
+        throw new AppError('Channel not found', 404);
+      }
+      
+      console.log('🔍 joinChannel: Channel found:', {
+        channelId: channel._id,
+        teamId: channel.teamId,
+        teamIdType: typeof channel.teamId,
+        teamIdValue: channel.teamId
+      });
+
+      // Check if user is already a member
+      const isAlreadyMember = channel.members.some(member => 
+        member.userId.toString() === userId.toString()
+      );
+      
+      if (isAlreadyMember) {
+        throw new AppError('You are already a member of this channel', 400);
+      }
+
+      // Check if user is member of the team
+      // channel.teamId might be populated or just an ID string
+      let teamId;
+      if (typeof channel.teamId === 'object' && channel.teamId._id) {
+        teamId = channel.teamId._id;
+        console.log('🔍 joinChannel: Extracted teamId from object:', teamId);
+      } else if (typeof channel.teamId === 'string') {
+        teamId = channel.teamId;
+        console.log('🔍 joinChannel: Using teamId as string:', teamId);
+      } else {
+        console.log('🔍 joinChannel: Invalid teamId format:', channel.teamId);
+        throw new AppError('Invalid team ID format', 400);
+      }
+      
+      console.log('🔍 joinChannel: About to call findTeamById with teamId:', teamId);
+      const team = await findTeamById(teamId);
+      if (!team) {
+        throw new AppError('Team not found', 404);
+      }
+
+      const isTeamMember = team.members.some(member => 
+        member.toString() === userId.toString()
+      );
+      if (!isTeamMember) {
+        throw new AppError('You are not a member of this team', 403);
+      }
+
+      // Add user to channel members
+      const updatedChannel = await channelRepository.addMemberToChannel(channelId, userId);
+
+      // Emit socket event for real-time updates
+      try {
+        const io = getIO();
+        emitChannelMemberJoined(io, teamId, updatedChannel, userId);
+      } catch (socketError) {
+        // Socket event emission failed, but channel joined successfully
+      }
+
+      return updatedChannel;
     } catch (error) {
       throw error;
     }

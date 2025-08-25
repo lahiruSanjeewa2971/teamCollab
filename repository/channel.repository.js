@@ -49,8 +49,7 @@ class ChannelRepository {
     try {
       return await Channel.findById(channelId)
         .populate('createdBy', 'name email')
-        .populate('teamId', 'name')
-        .lean();
+        .populate('teamId', 'name');
     } catch (error) {
       throw error;
     }
@@ -69,6 +68,51 @@ class ChannelRepository {
         .sort({ createdAt: -1 })
         .lean();
       return channels;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get all channels from teams where user is a member
+   */
+  async getChannelsFromUserTeams(userId, teamIds) {
+    try {
+      const channels = await Channel.find({
+        teamId: { $in: teamIds }
+      })
+        .populate('createdBy', 'name email')
+        .populate('teamId', 'name')
+        .sort({ name: 1 })
+        .lean();
+      return channels;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Add a member to a channel
+   */
+  async addMemberToChannel(channelId, userId) {
+    try {
+      const channel = await Channel.findByIdAndUpdate(
+        channelId,
+        {
+          $push: {
+            members: {
+              userId: userId,
+              role: 'member',
+              joinedAt: new Date()
+            }
+          }
+        },
+        { new: true }
+      )
+        .populate('createdBy', 'name email')
+        .populate('teamId', 'name');
+
+      return channel;
     } catch (error) {
       throw error;
     }

@@ -52,3 +52,22 @@ export const emitChannelDeleted = (io, teamId, channelId) => {
     console.error('Error emitting channel:deleted event:', error);
   }
 };
+
+/**
+ * Emit channel member joined event to team room
+ * @param {Object} io - Socket.IO instance
+ * @param {string} teamId - Team ID
+ * @param {Object} channel - Updated channel data
+ * @param {string} userId - User ID who joined
+ */
+export const emitChannelMemberJoined = (io, teamId, channel, userId) => {
+  try {
+    io.to(`team:${teamId}`).emit('channel:member:joined', {
+      teamId,
+      channel,
+      userId
+    });
+  } catch (error) {
+    console.error('Error emitting channel:member:joined event:', error);
+  }
+};
