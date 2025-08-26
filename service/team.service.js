@@ -66,7 +66,8 @@ export const addMemberToTeamService = async (teamId, userId, requesterId) => {
     }
     
     // Check if requester is the team owner
-    if (team.owner.toString() !== requesterId.toString()) {
+    const ownerId = typeof team.owner === 'object' && team.owner._id ? team.owner._id.toString() : team.owner.toString();
+    if (ownerId !== requesterId.toString()) {
         throw new AppError('Only team owner can add members', 403);
     }
     
@@ -102,17 +103,27 @@ export const removeMemberFromTeamService = async (teamId, memberId, requesterId)
     }
     
     // Check if requester is the team owner
-    if (team.owner.toString() !== requesterId.toString()) {
+    const ownerId = typeof team.owner === 'object' && team.owner._id ? team.owner._id.toString() : team.owner.toString();
+    if (ownerId !== requesterId.toString()) {
         throw new AppError('Only team owner can remove members', 403);
     }
     
     // Check if trying to remove the owner
-    if (team.owner.toString() === memberId.toString()) {
+    if (ownerId === memberId.toString()) {
         throw new AppError('Cannot remove team owner', 400);
     }
     
     // Check if user is actually a member
-    if (!team.members.some(member => member.toString() === memberId.toString())) {
+    const isMember = team.members.some(member => {
+        if (typeof member === 'object' && member._id) {
+            // Populated member object
+            return member._id.toString() === memberId.toString();
+        } else {
+            // Unpopulated member ID string
+            return member.toString() === memberId.toString();
+        }
+    });
+    if (!isMember) {
         throw new AppError('User is not a member of this team', 400);
     }
     
@@ -135,7 +146,8 @@ export const updateTeamService = async (teamId, requesterId, updateData) => {
     }
     
     // Check if requester is the team owner
-    if (team.owner.toString() !== requesterId.toString()) {
+    const ownerId = typeof team.owner === 'object' && team.owner._id ? team.owner._id.toString() : team.owner.toString();
+    if (ownerId !== requesterId.toString()) {
         throw new AppError('Only team owner can update team details', 403);
     }
     

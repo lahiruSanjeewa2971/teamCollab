@@ -19,11 +19,17 @@ class ChannelService {
       }
 
       // Check if user is a member of the team
-      const isMember = team.members.some(member => 
-        member.toString() === userId.toString()
-      );
+      const isMember = team.members.some(member => {
+        if (typeof member === 'object' && member._id) {
+          // Populated member object
+          return member._id.toString() === userId.toString();
+        } else {
+          // Unpopulated member ID string
+          return member.toString() === userId.toString();
+        }
+      });
       if (!isMember) {
-        throw new AppError('You are not a member of this team', 403);
+        throw new AppError('You are not a member of this team 1', 403);
       }
 
       // Check if user is the team owner
@@ -86,12 +92,18 @@ class ChannelService {
 
       // Check if user is a member (either owner or regular member)
       const isOwner = team.owner.toString() === userId.toString();
-      const isMember = team.members.some(member => 
-        member.toString() === userId.toString()
-      );
+      const isMember = team.members.some(member => {
+        if (typeof member === 'object' && member._id) {
+          // Populated member object
+          return member._id.toString() === userId.toString();
+        } else {
+          // Unpopulated member ID string
+          return member.toString() === userId.toString();
+        }
+      });
       
       if (!isOwner && !isMember) {
-        throw new AppError('You are not a member of this team', 403);
+        throw new AppError('You are not a member of this team 2', 403);
       }
 
       return await channelRepository.getChannelsByTeam(teamId);
@@ -106,6 +118,8 @@ class ChannelService {
   async getChannelById(channelId, userId) {
     try {
       const channel = await channelRepository.getChannelById(channelId);
+      console.log('channel :', channel);
+      console.log('userId :', userId);
       if (!channel) {
         throw new AppError('Channel not found', 404);
       }
@@ -126,11 +140,18 @@ class ChannelService {
         throw new AppError('Team not found', 404);
       }
 
-      const isMember = team.members.some(member => 
-        member.toString() === userId.toString()
-      );
+      // Handle both populated and unpopulated member data
+      const isMember = team.members.some(member => {
+        if (typeof member === 'object' && member._id) {
+          // Populated member object
+          return member._id.toString() === userId.toString();
+        } else {
+          // Unpopulated member ID string
+          return member.toString() === userId.toString();
+        }
+      });
       if (!isMember) {
-        throw new AppError('You are not a member of this team', 403);
+        throw new AppError('You are not a member of this team 3', 403);
       }
 
       return channel;
@@ -220,7 +241,7 @@ class ChannelService {
         member.toString() === userId.toString()
       );
       if (!isTeamMember) {
-        throw new AppError('You are not a member of this team', 403);
+        throw new AppError('You are not a member of this team 4', 403);
       }
 
       // Add user to channel members
@@ -235,6 +256,121 @@ class ChannelService {
       }
 
       return updatedChannel;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Add multiple members to a channel
+   */
+  async addMembersToChannel(channelId, userIds, adminUserId) {
+    try {
+      // Get the channel
+      const channel = await channelRepository.getChannelById(channelId);
+      if (!channel) {
+        throw new AppError('Channel not found', 404);
+      }
+
+      // Check if admin user is the channel creator or has admin role
+      const isCreator = channel.createdBy.toString() === adminUserId.toString();
+      const isAdmin = channel.members.some(member => 
+        member.userId.toString() === adminUserId.toString() && member.role === 'admin'
+      );
+      
+      if (!isCreator && !isAdmin) {
+        throw new AppError('Only channel admins can add members', 403);
+      }
+
+      // Check if all users are team members
+      const team = await findTeamById(channel.teamId);
+      if (!team) {
+        throw new AppError('Team not found', 404);
+      }
+
+      // Validate that all users are team members
+      for (const userId of userIds) {
+        const isTeamMember = team.members.some(member => {
+          if (typeof member === 'object' && member._id) {
+            // Populated member object
+            return member._id.toString() === userId.toString();
+          } else {
+            // Unpopulated member ID string
+            return member.toString() === userId.toString();
+          }
+        });
+        if (!isTeamMember) {
+          throw new AppError(`User ${userId} is not a member of this team`, 403);
+        }
+      }
+
+      // Check if any users are already channel members
+      const existingMembers = channel.members.filter(member => 
+        userIds.includes(member.userId.toString())
+      );
+      
+      if (existingMembers.length > 0) {
+        const existingNames = existingMembers.map(member => 
+          member.userId.name || member.userId.email || 'Unknown'
+        ).join(', ');
+        throw new AppError(`Users already in channel: ${existingNames}`, 400);
+      }
+
+      // Add members to channel
+      const updatedChannel = await channelRepository.addMembersToChannel(channelId, userIds);
+
+      // Emit socket event for real-time updates
+      try {
+        const io = getIO();
+        // You can create a new event for multiple members added
+        // For now, emit individual events
+        userIds.forEach(userId => {
+          emitChannelMemberJoined(io, channel.teamId, updatedChannel, userId);
+        });
+      } catch (socketError) {
+        // Socket event emission failed, but members added successfully
+      }
+
+      return updatedChannel;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get team members for a channel (for adding members)
+   */
+  async getChannelTeamMembers(channelId, userId) {
+    try {
+      // Get the channel to check if user has access
+      const channel = await channelRepository.getChannelById(channelId);
+      if (!channel) {
+        throw new AppError('Channel not found', 404);
+      }
+
+      // Check if user is a member of the team
+      const team = await findTeamById(channel.teamId);
+      if (!team) {
+        throw new AppError('Team not found', 404);
+      }
+
+      // Handle both populated and unpopulated member data
+      const isTeamMember = team.members.some(member => {
+        if (typeof member === 'object' && member._id) {
+          // Populated member object
+          return member._id.toString() === userId.toString();
+        } else {
+          // Unpopulated member ID string
+          return member.toString() === userId.toString();
+        }
+      });
+      
+      if (!isTeamMember) {
+        throw new AppError('You are not a member of this team 5', 403);
+      }
+
+      // Return team with populated members
+      return team;
     } catch (error) {
       throw error;
     }

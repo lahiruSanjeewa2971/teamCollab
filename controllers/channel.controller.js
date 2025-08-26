@@ -55,7 +55,9 @@ export const getChannelById = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user._id;
 
+    console.log('1')
     const channel = await channelService.getChannelById(channelId, userId);
+    console.log('channel :', channel);
 
     res.status(200).json({
       success: true,
@@ -123,6 +125,53 @@ export const joinChannel = async (req, res, next) => {
     res.status(200).json({
       success: true,
       channel
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add multiple members to a channel
+ */
+export const addMembersToChannel = async (req, res, next) => {
+  try {
+    const { channelId } = req.params;
+    const { userIds } = req.body;
+    const adminUserId = req.user._id;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'userIds array is required and must not be empty'
+      });
+    }
+
+    const channel = await channelService.addMembersToChannel(channelId, userIds, adminUserId);
+
+    res.status(200).json({
+      success: true,
+      channel,
+      message: `${userIds.length} member${userIds.length !== 1 ? 's' : ''} added successfully`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get team members for a channel (for adding members)
+ */
+export const getChannelTeamMembers = async (req, res, next) => {
+  try {
+    const { channelId } = req.params;
+    const userId = req.user._id;
+
+    const team = await channelService.getChannelTeamMembers(channelId, userId);
+
+    res.status(200).json({
+      success: true,
+      team
     });
   } catch (error) {
     next(error);

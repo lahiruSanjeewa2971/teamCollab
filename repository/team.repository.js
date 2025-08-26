@@ -9,7 +9,9 @@ export const createNewTeam = async (teamData) => {
 };
 
 export const findTeamById = async (teamId) => {
-  return await Team.findById(teamId);
+  return await Team.findById(teamId)
+    .populate('owner', 'name email')
+    .populate('members', 'name email avatar');
 };
 
 export const addMemberToTeam = async (teamId, userId) => {

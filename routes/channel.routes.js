@@ -1,5 +1,5 @@
 import express from 'express';
-import { createChannel, getChannelsByTeam, getChannelById, getUserChannels, getChannelsFromUserTeams, joinChannel } from '../controllers/channel.controller.js';
+import { createChannel, getChannelsByTeam, getChannelById, getUserChannels, getChannelsFromUserTeams, joinChannel, addMembersToChannel, getChannelTeamMembers } from '../controllers/channel.controller.js';
 import authMiddleware from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -22,7 +22,13 @@ router.post('/channels/from-teams', getChannelsFromUserTeams);
 // POST /api/channels/:channelId/join - Join a channel
 router.post('/channels/:channelId/join', joinChannel);
 
+// POST /api/channels/:channelId/members - Add multiple members to a channel
+router.post('/channels/:channelId/members', addMembersToChannel);
+
 // GET /api/channels/:channelId - Get channel by ID (must come after specific routes)
 router.get('/channels/:channelId', getChannelById);
+
+// GET /api/channels/getTeamMembers/:channelId - Get team members for a channel
+router.get('/channels/getTeamMembers/:channelId', getChannelTeamMembers);
 
 export default router;

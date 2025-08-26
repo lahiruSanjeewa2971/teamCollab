@@ -21,6 +21,7 @@ class ChannelRepository {
       return await Channel.find({ teamId })
         .sort({ name: 1 }) // Sort alphabetically by name
         .populate('createdBy', 'name email')
+        .populate('members.userId', 'name email avatar')
         .lean();
     } catch (error) {
       throw error;
@@ -46,10 +47,11 @@ class ChannelRepository {
    * Get channel by ID
    */
   async getChannelById(channelId) {
+    console.log('3')
     try {
       return await Channel.findById(channelId)
         .populate('createdBy', 'name email')
-        .populate('teamId', 'name');
+        .populate('members.userId', 'name email avatar');
     } catch (error) {
       throw error;
     }
@@ -65,6 +67,7 @@ class ChannelRepository {
       })
         .populate('createdBy', 'name email')
         .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatar')
         .sort({ createdAt: -1 })
         .lean();
       return channels;
@@ -83,6 +86,7 @@ class ChannelRepository {
       })
         .populate('createdBy', 'name email')
         .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatar')
         .sort({ name: 1 })
         .lean();
       return channels;
@@ -110,9 +114,59 @@ class ChannelRepository {
         { new: true }
       )
         .populate('createdBy', 'name email')
-        .populate('teamId', 'name');
+        .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatar');
 
       return channel;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Add multiple members to a channel
+   */
+  async addMembersToChannel(channelId, userIds) {
+    try {
+      const membersToAdd = userIds.map(userId => ({
+        userId: userId,
+        role: 'member',
+        joinedAt: new Date()
+      }));
+
+      const channel = await Channel.findByIdAndUpdate(
+        channelId,
+        {
+          $push: {
+            members: {
+              $each: membersToAdd
+            }
+          }
+        },
+        { new: true }
+      )
+        .populate('createdBy', 'name email')
+        .populate('members.userId', 'name email avatar');
+
+      return channel;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get team members for a channel (for adding members)
+   */
+  async getChannelTeamMembers(channelId) {
+    try {
+      const channel = await Channel.findById(channelId)
+        .lean();
+      
+      if (!channel) {
+        throw new Error('Channel not found');
+      }
+
+      return channel.teamId;
     } catch (error) {
       throw error;
     }
