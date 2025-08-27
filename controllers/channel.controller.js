@@ -177,3 +177,30 @@ export const getChannelTeamMembers = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Remove a member from a channel
+ */
+export const removeMemberFromChannel = async (req, res, next) => {
+  try {
+    const { channelId, memberId } = req.params;
+    const adminUserId = req.user._id;
+
+    if (!memberId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member ID is required'
+      });
+    }
+
+    const channel = await channelService.removeMemberFromChannel(channelId, memberId, adminUserId);
+
+    res.status(200).json({
+      success: true,
+      channel,
+      message: 'Member removed from channel successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};

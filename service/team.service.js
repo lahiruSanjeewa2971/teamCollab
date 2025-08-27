@@ -1,16 +1,17 @@
 import Team from '../models/Team.js';
 import { 
-    addMemberToTeam, 
+    findTeamByName, 
     createNewTeam, 
     findTeamById, 
-    findTeamByName,
-    getTeamsByUserMembership,
-    updateTeamMembers,
-    updateTeamDetails,
-    searchTeamsByName,
-    removeMemberFromTeam
-} from '../repository/team.repository.js';
-import AppError from '../utils/AppError.js';
+    addMemberToTeam, 
+    getTeamsByUserMembership, 
+    updateTeamMembers, 
+    searchTeamsByName, 
+    removeMemberFromTeam, 
+    updateTeamDetails 
+} from "../repository/team.repository.js";
+import channelRepository from "../repository/channel.repository.js";
+import AppError from "../utils/AppError.js";
 
 export const createTeamService = async (name, ownerId, description = "", members = []) => {
     const existingTeam = await findTeamByName(name);
@@ -126,6 +127,38 @@ export const removeMemberFromTeamService = async (teamId, memberId, requesterId)
     if (!isMember) {
         throw new AppError('User is not a member of this team', 400);
     }
+
+    // SAFETY CHECK: Check if team has channels and if the user is a member of any channels
+    try {
+        const teamChannels = await channelRepository.getChannelsByTeam(teamId);
+        
+        if (teamChannels && teamChannels.length > 0) {
+            // Check if the user being removed is a member of any channels
+            for (const channel of teamChannels) {
+                const isChannelMember = channel.members.some(member => {
+                    const memberUserId = typeof member.userId === 'object' && member.userId._id 
+                        ? member.userId._id.toString() 
+                        : member.userId.toString();
+                    return memberUserId === memberId.toString();
+                });
+                
+                if (isChannelMember) {
+                    throw new AppError(
+                        `Cannot remove user from team. User is a member of channel '${channel.name}'. Remove user from all channels first.`, 
+                        400
+                    );
+                }
+            }
+        }
+    } catch (error) {
+        // If it's our custom error, re-throw it
+        if (error instanceof AppError) {
+            throw error;
+        }
+        // If it's a different error (e.g., database error), log it but continue
+        console.error('Error checking channels for safety check:', error);
+        // Continue with removal if we can't verify channels
+    }
     
     const updatedTeam = await removeMemberFromTeam(teamId, memberId);
     
@@ -135,7 +168,7 @@ export const removeMemberFromTeamService = async (teamId, memberId, requesterId)
         removedMemberId: memberId,
         teamName: team.name
     };
-}
+};
 
 // Update team details (only owner can do this)
 export const updateTeamService = async (teamId, requesterId, updateData) => {

@@ -6,6 +6,71 @@ import { getIO } from '../socket/index.js';
 
 class ChannelService {
   /**
+   * Utility function to safely extract ID from populated or unpopulated field
+   * @param {Object|string} field - Can be populated object with _id or string ID
+   * @returns {string} - Always returns string ID
+   */
+  _extractId(field) {
+    if (typeof field === 'object' && field._id) {
+      return field._id.toString();
+    }
+    return field.toString();
+  }
+
+  /**
+   * Utility function to safely extract team ID from channel
+   * @param {Object} channel - Channel object that might have populated teamId
+   * @returns {string} - Always returns string team ID
+   */
+  _extractTeamId(channel) {
+    return this._extractId(channel.teamId);
+  }
+
+  /**
+   * Utility function to safely extract user ID from channel member
+   * @param {Object} member - Member object that might have populated userId
+   * @returns {string} - Always returns string user ID
+   */
+  _extractMemberUserId(member) {
+    return this._extractId(member.userId);
+  }
+
+  /**
+   * Utility function to safely extract creator ID from channel
+   * @param {Object} channel - Channel object that might have populated createdBy
+   * @returns {string} - Always returns string creator ID
+   */
+  _extractCreatorId(channel) {
+    return this._extractId(channel.createdBy);
+  }
+
+  /**
+   * Utility function to check if user is team member
+   * @param {Array} teamMembers - Team members array (populated or unpopulated)
+   * @param {string} userId - User ID to check
+   * @returns {boolean} - True if user is team member
+   */
+  _isTeamMember(teamMembers, userId) {
+    return teamMembers.some(member => {
+      const memberId = this._extractId(member);
+      return memberId === userId.toString();
+    });
+  }
+
+  /**
+   * Utility function to check if user is channel member
+   * @param {Array} channelMembers - Channel members array (populated or unpopulated)
+   * @param {string} userId - User ID to check
+   * @returns {Object|null} - Member object if found, null otherwise
+   */
+  _findChannelMember(channelMembers, userId) {
+    return channelMembers.find(member => {
+      const memberUserId = this._extractMemberUserId(member);
+      return memberUserId === userId.toString();
+    });
+  }
+
+  /**
    * Create a new channel
    */
   async createChannel(channelData, userId) {
@@ -19,21 +84,14 @@ class ChannelService {
       }
 
       // Check if user is a member of the team
-      const isMember = team.members.some(member => {
-        if (typeof member === 'object' && member._id) {
-          // Populated member object
-          return member._id.toString() === userId.toString();
-        } else {
-          // Unpopulated member ID string
-          return member.toString() === userId.toString();
-        }
-      });
+      const isMember = this._isTeamMember(team.members, userId);
       if (!isMember) {
         throw new AppError('You are not a member of this team 1', 403);
       }
 
       // Check if user is the team owner
-      if (team.owner.toString() !== userId.toString()) {
+      const isOwner = this._extractId(team.owner) === userId.toString();
+      if (!isOwner) {
         throw new AppError('Only team owners can create channels', 403);
       }
 
@@ -91,16 +149,8 @@ class ChannelService {
       }
 
       // Check if user is a member (either owner or regular member)
-      const isOwner = team.owner.toString() === userId.toString();
-      const isMember = team.members.some(member => {
-        if (typeof member === 'object' && member._id) {
-          // Populated member object
-          return member._id.toString() === userId.toString();
-        } else {
-          // Unpopulated member ID string
-          return member.toString() === userId.toString();
-        }
-      });
+      const isOwner = this._extractId(team.owner) === userId.toString();
+      const isMember = this._isTeamMember(team.members, userId);
       
       if (!isOwner && !isMember) {
         throw new AppError('You are not a member of this team 2', 403);
@@ -125,32 +175,14 @@ class ChannelService {
       }
 
       // Check if user is member of the team
-      // channel.teamId might be populated or just an ID string
-      let teamId;
-      if (typeof channel.teamId === 'object' && channel.teamId._id) {
-        teamId = channel.teamId._id;
-      } else if (typeof channel.teamId === 'string') {
-        teamId = channel.teamId;
-      } else {
-        throw new AppError('Invalid team ID format', 400);
-      }
-      
+      const teamId = this._extractTeamId(channel);
       const team = await findTeamById(teamId);
       if (!team) {
         throw new AppError('Team not found', 404);
       }
 
       // Handle both populated and unpopulated member data
-      const isMember = team.members.some(member => {
-        if (typeof member === 'object' && member._id) {
-          // Populated member object
-          return member._id.toString() === userId.toString();
-        } else {
-          // Unpopulated member ID string
-          return member.toString() === userId.toString();
-        }
-      });
-      if (!isMember) {
+      if (!this._isTeamMember(team.members, userId)) {
         throw new AppError('You are not a member of this team 3', 403);
       }
 
@@ -209,52 +241,41 @@ class ChannelService {
       });
 
       // Check if user is already a member
-      const isAlreadyMember = channel.members.some(member => 
-        member.userId.toString() === userId.toString()
-      );
+      const isAlreadyMember = channel.members.some(member => {
+        const memberUserId = this._extractMemberUserId(member);
+        return memberUserId === userId.toString();
+      });
       
       if (isAlreadyMember) {
         throw new AppError('You are already a member of this channel', 400);
       }
 
       // Check if user is member of the team
-      // channel.teamId might be populated or just an ID string
-      let teamId;
-      if (typeof channel.teamId === 'object' && channel.teamId._id) {
-        teamId = channel.teamId._id;
-        console.log('🔍 joinChannel: Extracted teamId from object:', teamId);
-      } else if (typeof channel.teamId === 'string') {
-        teamId = channel.teamId;
-        console.log('🔍 joinChannel: Using teamId as string:', teamId);
-      } else {
-        console.log('🔍 joinChannel: Invalid teamId format:', channel.teamId);
-        throw new AppError('Invalid team ID format', 400);
-      }
-      
+      const teamId = this._extractTeamId(channel);
+      console.log('🔍 joinChannel: Extracted teamId from object:', teamId);
       console.log('🔍 joinChannel: About to call findTeamById with teamId:', teamId);
+      
       const team = await findTeamById(teamId);
       if (!team) {
         throw new AppError('Team not found', 404);
       }
 
-      const isTeamMember = team.members.some(member => 
-        member.toString() === userId.toString()
-      );
-      if (!isTeamMember) {
+      // Check if user is a member of the team
+      if (!this._isTeamMember(team.members, userId)) {
         throw new AppError('You are not a member of this team 4', 403);
       }
 
-      // Add user to channel members
+      // Add user to channel
       const updatedChannel = await channelRepository.addMemberToChannel(channelId, userId);
-
+      
       // Emit socket event for real-time updates
       try {
         const io = getIO();
         emitChannelMemberJoined(io, teamId, updatedChannel, userId);
       } catch (socketError) {
-        // Socket event emission failed, but channel joined successfully
+        // Socket event emission failed, but member joined successfully
       }
-
+      
       return updatedChannel;
     } catch (error) {
       throw error;
@@ -273,46 +294,45 @@ class ChannelService {
       }
 
       // Check if admin user is the channel creator or has admin role
-      const isCreator = channel.createdBy.toString() === adminUserId.toString();
-      const isAdmin = channel.members.some(member => 
-        member.userId.toString() === adminUserId.toString() && member.role === 'admin'
-      );
+      const isCreator = this._extractCreatorId(channel) === adminUserId.toString();
+      const isAdmin = channel.members.some(member => {
+        const memberUserId = this._extractMemberUserId(member);
+        return memberUserId === adminUserId.toString() && member.role === 'admin';
+      });
       
       if (!isCreator && !isAdmin) {
         throw new AppError('Only channel admins can add members', 403);
       }
 
       // Check if all users are team members
-      const team = await findTeamById(channel.teamId);
+      const teamId = this._extractTeamId(channel);
+      const team = await findTeamById(teamId);
       if (!team) {
         throw new AppError('Team not found', 404);
       }
 
       // Validate that all users are team members
       for (const userId of userIds) {
-        const isTeamMember = team.members.some(member => {
-          if (typeof member === 'object' && member._id) {
-            // Populated member object
-            return member._id.toString() === userId.toString();
-          } else {
-            // Unpopulated member ID string
-            return member.toString() === userId.toString();
-          }
-        });
-        if (!isTeamMember) {
+        if (!this._isTeamMember(team.members, userId)) {
           throw new AppError(`User ${userId} is not a member of this team`, 403);
         }
       }
 
       // Check if any users are already channel members
-      const existingMembers = channel.members.filter(member => 
-        userIds.includes(member.userId.toString())
-      );
+      const existingMembers = channel.members.filter(member => {
+        const memberUserId = this._extractMemberUserId(member);
+        return userIds.includes(memberUserId);
+      });
       
       if (existingMembers.length > 0) {
-        const existingNames = existingMembers.map(member => 
-          member.userId.name || member.userId.email || 'Unknown'
-        ).join(', ');
+        const existingNames = existingMembers.map(member => {
+          const memberUserId = this._extractMemberUserId(member);
+          // If memberUserId is populated, it will have name/email, otherwise use the ID
+          if (typeof member.userId === 'object' && member.userId._id) {
+            return member.userId.name || member.userId.email || 'Unknown';
+          }
+          return 'Unknown';
+        }).join(', ');
         throw new AppError(`Users already in channel: ${existingNames}`, 400);
       }
 
@@ -322,12 +342,48 @@ class ChannelService {
       // Emit socket event for real-time updates
       try {
         const io = getIO();
-        // You can create a new event for multiple members added
-        // For now, emit individual events
         userIds.forEach(userId => {
-          emitChannelMemberJoined(io, channel.teamId, updatedChannel, userId);
+          emitChannelMemberJoined(io, teamId, updatedChannel, userId);
         });
       } catch (socketError) {
+        // Socket event emission failed, but members added successfully
+      }
+
+      // Send Socket.IO notifications to added members
+      try {
+        const io = getIO();
+        const notificationService = await import('../service/notification.service.js');
+        
+        // Get team details for notification
+        const teamName = team?.name || 'Unknown Team';
+        
+        // Send notifications to each added member
+        for (const userId of userIds) {
+          try {
+            // Create persistent notification in database
+            await notificationService.default.createChannelMemberAddedNotification(
+              userId, 
+              channelId, 
+              channel.name, 
+              teamId, 
+              teamName
+            );
+            
+            // Send real-time notification via Socket.IO
+            io.to(`user-${userId}`).emit('user:added-to-channel', {
+              channelId,
+              channelName: channel.name,
+              teamId,
+              teamName,
+              message: `You have been added to channel '${channel.name}'`,
+              timestamp: new Date().toISOString()
+            });
+          } catch (notificationError) {
+            console.error(`Failed to send notification to user ${userId}:`, notificationError);
+          }
+        }
+      } catch (socketError) {
+        console.error('Socket.IO notification failed:', socketError);
         // Socket event emission failed, but members added successfully
       }
 
@@ -349,28 +405,72 @@ class ChannelService {
       }
 
       // Check if user is a member of the team
-      const team = await findTeamById(channel.teamId);
+      const teamId = this._extractTeamId(channel);
+      const team = await findTeamById(teamId);
       if (!team) {
         throw new AppError('Team not found', 404);
       }
 
       // Handle both populated and unpopulated member data
-      const isTeamMember = team.members.some(member => {
-        if (typeof member === 'object' && member._id) {
-          // Populated member object
-          return member._id.toString() === userId.toString();
-        } else {
-          // Unpopulated member ID string
-          return member.toString() === userId.toString();
-        }
-      });
-      
-      if (!isTeamMember) {
-        throw new AppError('You are not a member of this team 5', 403);
+      if (!this._isTeamMember(team.members, userId)) {
+        throw new AppError(`User ${userId} is not a member of this team`, 403);
       }
 
       // Return team with populated members
       return team;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a channel
+   */
+  async removeMemberFromChannel(channelId, memberId, adminUserId) {
+    try {
+      // Get the channel
+      const channel = await channelRepository.getChannelById(channelId);
+      if (!channel) {
+        throw new AppError('Channel not found', 404);
+      }
+
+      // Check if requester is channel admin
+      const isAdmin = channel.members.some(member => {
+        const memberUserId = this._extractMemberUserId(member);
+        return memberUserId === adminUserId.toString() && member.role === 'admin';
+      });
+
+      if (!isAdmin) {
+        throw new AppError('Only channel admins can remove members', 403);
+      }
+
+      // Check if trying to remove another admin
+      const memberToRemove = this._findChannelMember(channel.members, memberId);
+
+      if (!memberToRemove) {
+        throw new AppError('Member not found in channel', 404);
+      }
+
+      if (memberToRemove.role === 'admin') {
+        throw new AppError('Cannot remove another admin from the channel', 400);
+      }
+
+      // Remove the member
+      const updatedChannel = await channelRepository.removeMemberFromChannel(channelId, memberId);
+      
+      // Emit socket event for real-time updates
+      try {
+        const io = getIO();
+        io.to(channelId).emit('channel:member:removed', {
+          channelId,
+          memberId,
+          channel: updatedChannel
+        });
+      } catch (socketError) {
+        // Socket event emission failed, but member removed successfully
+      }
+      
+      return updatedChannel;
     } catch (error) {
       throw error;
     }

@@ -11,7 +11,7 @@ export const createNewTeam = async (teamData) => {
 export const findTeamById = async (teamId) => {
   return await Team.findById(teamId)
     .populate('owner', 'name email')
-    .populate('members', 'name email avatar');
+    .populate('members', 'name email avatarUrl');
 };
 
 export const addMemberToTeam = async (teamId, userId) => {
@@ -30,10 +30,24 @@ export const getTeamsByUserMembership = async (userId) => {
   
   const teams = await Team.find({ members: userId })
     .populate('owner', 'name email')
-    .populate('members', 'name email')
+    .populate('members', 'name email avatarUrl')
     .sort({ createdAt: -1 });
   
   console.log('getTeamsByUserMembership: Found teams:', teams);
+  
+  // Add detailed logging to verify population
+  teams.forEach((team, index) => {
+    console.log(`Team ${index + 1} (${team.name}):`);
+    console.log(`  - Owner:`, team.owner);
+    console.log(`  - Members count:`, team.members.length);
+    console.log(`  - Members:`, team.members.map(member => ({
+      _id: member._id,
+      name: member.name,
+      email: member.email,
+      avatarUrl: member.avatarUrl
+    })));
+  });
+  
   return teams;
 };
 
@@ -44,7 +58,7 @@ export const updateTeamMembers = async (teamId, userId) => {
     { $addToSet: { members: userId } },
     { new: true }
   ).populate('owner', 'name email')
-   .populate('members', 'name email');
+   .populate('members', 'name email avatarUrl');
 };
 
 // Search teams by name
@@ -56,7 +70,7 @@ export const searchTeamsByName = async (query, userId) => {
     members: { $ne: userId } // Exclude teams where user is already a member
   })
   .populate('owner', 'name email')
-  .populate('members', 'name email')
+  .populate('members', 'name email avatarUrl')
   .sort({ createdAt: -1 })
   .limit(10); // Limit results to prevent overwhelming response
 };
@@ -68,7 +82,7 @@ export const removeMemberFromTeam = async (teamId, memberId) => {
     { $pull: { members: memberId } },
     { new: true }
   ).populate('owner', 'name email')
-   .populate('members', 'name email');
+   .populate('members', 'name email avatarUrl');
 };
 
 // Update team details (name, description)
@@ -78,5 +92,5 @@ export const updateTeamDetails = async (teamId, updateData) => {
         updateData,
         { new: true, runValidators: true }
     ).populate('owner', 'name email')
-     .populate('members', 'name email');
+     .populate('members', 'name email avatarUrl');
 };

@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['team_removal', 'team_invite', 'team_update', 'system', 'test']
+    enum: ['team_removal', 'team_invite', 'team_update', 'system', 'test', 'channel_member_added']
   },
   title: {
     type: String,
@@ -26,6 +26,15 @@ const notificationSchema = new mongoose.Schema({
     required: false
   },
   teamName: {
+    type: String,
+    required: false
+  },
+  channelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Channel',
+    required: false
+  },
+  channelName: {
     type: String,
     required: false
   },

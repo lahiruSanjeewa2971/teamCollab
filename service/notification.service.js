@@ -130,17 +130,69 @@ class NotificationService {
    */
   async updateTeamRemovalNotification(notificationId, teamName) {
     try {
-      const updateData = {
+      const updatedNotification = await notificationRepository.updateNotification(notificationId, {
         message: `You have been removed from '${teamName}'`,
+        teamName,
         occurrenceCount: { $inc: 1 },
-        lastOccurrence: new Date(),
-        isRead: false, // Mark as unread since it's a new occurrence
-        isResolved: false // Reset resolved status
-      };
+        lastOccurrence: new Date()
+      });
       
-      return await notificationRepository.updateNotification(notificationId, updateData);
+      return updatedNotification;
     } catch (error) {
       throw new Error(`Failed to update team removal notification: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create channel member added notification with duplicate prevention
+   */
+  async createChannelMemberAddedNotification(userId, channelId, channelName, teamId, teamName) {
+    try {
+      // Create a unique hash for this action
+      const actionHash = `channel_member_added_${userId}_${channelId}`;
+      
+      // Check if notification already exists
+      const existingNotification = await notificationRepository.getNotificationByActionHash(actionHash, userId);
+      
+      if (existingNotification) {
+        // Update existing notification instead of creating duplicate
+        return await this.updateChannelMemberAddedNotification(existingNotification._id, channelName);
+      } else {
+        // Create new notification
+        return await this.createNotification(userId, {
+          type: 'channel_member_added',
+          title: 'Added to Channel',
+          message: `You have been added to channel '${channelName}'`,
+          teamId,
+          teamName,
+          channelId,
+          channelName,
+          severity: 'success',
+          actionHash,
+          occurrenceCount: 1,
+          lastOccurrence: new Date()
+        });
+      }
+    } catch (error) {
+      throw new Error(`Failed to create channel member added notification: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update existing channel member added notification (for repeated additions)
+   */
+  async updateChannelMemberAddedNotification(notificationId, channelName) {
+    try {
+      const updatedNotification = await notificationRepository.updateNotification(notificationId, {
+        message: `You have been added to channel '${channelName}'`,
+        channelName,
+        occurrenceCount: { $inc: 1 },
+        lastOccurrence: new Date()
+      });
+      
+      return updatedNotification;
+    } catch (error) {
+      throw new Error(`Failed to update channel member added notification: ${error.message}`);
     }
   }
 

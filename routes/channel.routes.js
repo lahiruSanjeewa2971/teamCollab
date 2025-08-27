@@ -1,5 +1,5 @@
 import express from 'express';
-import { createChannel, getChannelsByTeam, getChannelById, getUserChannels, getChannelsFromUserTeams, joinChannel, addMembersToChannel, getChannelTeamMembers } from '../controllers/channel.controller.js';
+import { createChannel, getChannelsByTeam, getChannelById, getUserChannels, getChannelsFromUserTeams, joinChannel, addMembersToChannel, getChannelTeamMembers, removeMemberFromChannel } from '../controllers/channel.controller.js';
 import authMiddleware from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -24,6 +24,9 @@ router.post('/channels/:channelId/join', joinChannel);
 
 // POST /api/channels/:channelId/members - Add multiple members to a channel
 router.post('/channels/:channelId/members', addMembersToChannel);
+
+// DELETE /api/channels/:channelId/members/:memberId - Remove a member from a channel
+router.delete('/channels/:channelId/members/:memberId', removeMemberFromChannel);
 
 // GET /api/channels/:channelId - Get channel by ID (must come after specific routes)
 router.get('/channels/:channelId', getChannelById);

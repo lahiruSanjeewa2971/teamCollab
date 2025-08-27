@@ -21,7 +21,7 @@ class ChannelRepository {
       return await Channel.find({ teamId })
         .sort({ name: 1 }) // Sort alphabetically by name
         .populate('createdBy', 'name email')
-        .populate('members.userId', 'name email avatar')
+        .populate('members.userId', 'name email avatarUrl')
         .lean();
     } catch (error) {
       throw error;
@@ -51,7 +51,8 @@ class ChannelRepository {
     try {
       return await Channel.findById(channelId)
         .populate('createdBy', 'name email')
-        .populate('members.userId', 'name email avatar');
+        .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatarUrl');
     } catch (error) {
       throw error;
     }
@@ -67,7 +68,7 @@ class ChannelRepository {
       })
         .populate('createdBy', 'name email')
         .populate('teamId', 'name')
-        .populate('members.userId', 'name email avatar')
+        .populate('members.userId', 'name email avatarUrl')
         .sort({ createdAt: -1 })
         .lean();
       return channels;
@@ -86,7 +87,7 @@ class ChannelRepository {
       })
         .populate('createdBy', 'name email')
         .populate('teamId', 'name')
-        .populate('members.userId', 'name email avatar')
+        .populate('members.userId', 'name email avatarUrl')
         .sort({ name: 1 })
         .lean();
       return channels;
@@ -115,7 +116,7 @@ class ChannelRepository {
       )
         .populate('createdBy', 'name email')
         .populate('teamId', 'name')
-        .populate('members.userId', 'name email avatar');
+        .populate('members.userId', 'name email avatarUrl');
 
       return channel;
     } catch (error) {
@@ -146,7 +147,7 @@ class ChannelRepository {
         { new: true }
       )
         .populate('createdBy', 'name email')
-        .populate('members.userId', 'name email avatar');
+        .populate('members.userId', 'name email avatarUrl');
 
       return channel;
     } catch (error) {
@@ -167,6 +168,30 @@ class ChannelRepository {
       }
 
       return channel.teamId;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a channel
+   */
+  async removeMemberFromChannel(channelId, userId) {
+    try {
+      const channel = await Channel.findByIdAndUpdate(
+        channelId,
+        {
+          $pull: {
+            members: { userId: userId }
+          }
+        },
+        { new: true }
+      )
+        .populate('createdBy', 'name email')
+        .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatarUrl');
+
+      return channel;
     } catch (error) {
       throw error;
     }
