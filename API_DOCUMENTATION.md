@@ -5,7 +5,7 @@ This document describes the enhanced TeamCollab backend APIs built with Node.js,
 
 ## Base URL
 ```
-http://localhost:5000/api
+http://localhost:5001/api
 ```
 
 ## Authentication

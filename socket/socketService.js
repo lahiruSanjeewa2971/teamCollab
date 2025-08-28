@@ -20,7 +20,7 @@ class SocketService {
   initialize(server, corsOrigin) {
     this.io = new Server(server, {
       cors: {
-        origin: corsOrigin || "http://localhost:5000",
+        origin: corsOrigin || "http://localhost:5001",
         credentials: true
       }
     });

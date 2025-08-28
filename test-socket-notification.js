@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5001/api';
 
 // Test data
 const testUser = {
@@ -24,7 +24,7 @@ async function testSocketNotification() {
 
     // Step 2: Check socket status
     console.log('\n2️⃣ Checking Socket.IO status...');
-    const socketStatus = await axios.get('http://localhost:5000/socket-status');
+    const socketStatus = await axios.get('http://localhost:5001/socket-status');
     console.log('📊 Socket Status:', socketStatus.data);
 
     // Step 3: Test team removal notification (simulate)
@@ -34,7 +34,7 @@ async function testSocketNotification() {
 
     // Step 4: Check socket status again
     console.log('\n4️⃣ Checking Socket.IO status after test...');
-    const socketStatusAfter = await axios.get('http://localhost:5000/socket-status');
+    const socketStatusAfter = await axios.get('http://localhost:5001/socket-status');
     console.log('📊 Socket Status After:', socketStatusAfter.data);
 
     console.log('\n✅ Test completed! Check frontend for notifications.');
