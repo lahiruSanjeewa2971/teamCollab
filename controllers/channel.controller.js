@@ -204,3 +204,30 @@ export const removeMemberFromChannel = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Update channel information
+ */
+export const updateChannel = async (req, res, next) => {
+  try {
+    const { channelId } = req.params;
+    const { name, displayName, description, type } = req.body;
+    const adminUserId = req.user._id;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (description !== undefined) updateData.description = description;
+    if (type !== undefined) updateData.type = type;
+
+    const channel = await channelService.updateChannel(channelId, updateData, adminUserId);
+
+    res.status(200).json({
+      success: true,
+      channel,
+      message: 'Channel updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};

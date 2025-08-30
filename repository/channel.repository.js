@@ -196,6 +196,26 @@ class ChannelRepository {
       throw error;
     }
   }
+
+  /**
+   * Update channel information
+   */
+  async updateChannel(channelId, updateData) {
+    try {
+      const channel = await Channel.findByIdAndUpdate(
+        channelId,
+        updateData,
+        { new: true, runValidators: true }
+      )
+        .populate('createdBy', 'name email')
+        .populate('teamId', 'name')
+        .populate('members.userId', 'name email avatarUrl');
+
+      return channel;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new ChannelRepository();

@@ -475,6 +475,66 @@ class ChannelService {
       throw error;
     }
   }
+
+  /**
+   * Update channel information
+   */
+  async updateChannel(channelId, updateData, adminUserId) {
+    try {
+      // Get the channel
+      const channel = await channelRepository.getChannelById(channelId);
+      if (!channel) {
+        throw new AppError('Channel not found', 404);
+      }
+
+      // Check if requester is channel admin
+      const isAdmin = channel.members.some(member => {
+        const memberUserId = this._extractMemberUserId(member);
+        return memberUserId === adminUserId.toString() && member.role === 'admin';
+      });
+
+      if (!isAdmin) {
+        throw new AppError('Only channel admins can update channel settings', 403);
+      }
+
+      // Validate channel type change
+      if (updateData.type && updateData.type !== channel.type) {
+        // Public channels can become private, but private channels cannot become public
+        if (channel.type === 'private' && updateData.type === 'public') {
+          throw new AppError('Private channels cannot be converted to public channels', 400);
+        }
+      }
+
+      // Check if new name conflicts with existing channel in the same team
+      if (updateData.name && updateData.name !== channel.name) {
+        const isNameTaken = await channelRepository.isChannelNameTaken(
+          this._extractTeamId(channel), 
+          updateData.name
+        );
+        if (isNameTaken) {
+          throw new AppError('Channel name already exists in this team', 400);
+        }
+      }
+
+      // Update the channel
+      const updatedChannel = await channelRepository.updateChannel(channelId, updateData);
+      
+      // Emit socket event for real-time updates
+      try {
+        const io = getIO();
+        io.to(channelId).emit('channel:updated', {
+          channelId,
+          channel: updatedChannel
+        });
+      } catch (socketError) {
+        // Socket event emission failed, but channel updated successfully
+      }
+      
+      return updatedChannel;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new ChannelService();
